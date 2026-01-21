@@ -1,0 +1,6 @@
+{
+  "plates": ["29F04881","29F04914","29F04955","29F04995","29H88992","29H92815","29H92963","29H92968","29K03813","29K03782","30L25216"],
+  "materials": ["Bùn","Đất","Cát","Đá"],
+  "from": ["S9(Kim Mã)","S10(Cát Linh)","S11(Văn Miếu)","S12(Trần Hưng Đạo)","Depot(Xuân Đỉnh)","THospital(Tứ Hiệp)","Gara(Trần Hưng Đạo)","Kho 6(Thanh Trì)"],
+  "to": ["Bãi Việt Hùng(KCN Ngọc Hồi)","Bãi Ông 7(Đền Dầm)","Bãi Ông 7(Xâm Động)","Bãi Ông 7(Cảng Hồng Vân)","Bãi Ông 7(Vân Tảo)","Cảng Tàu(Thanh Trì)","Bãi Việt Hùng(Liên Ninh)"]
+}
