@@ -1,0 +1,140 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Báo Nhật Trình</title>
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;padding:12px;background:#fff}
+    h3{margin-top:0}
+    .note{font-size:13px;color:#555;margin-bottom:8px}
+    table{width:100%;border-collapse:collapse;margin-bottom:8px}
+    th,td{border:1px solid #eee;padding:8px;text-align:left;font-size:14px}
+    th{background:#fafafa}
+    select,input{width:100%;padding:8px;font-size:14px;box-sizing:border-box}
+    button{width:100%;padding:12px;font-size:16px;background:#0b76ef;color:#fff;border:none;border-radius:6px}
+    .warn{color:#b33;margin-top:8px;font-size:13px}
+  </style>
+</head>
+<body>
+  <h3>Báo Nhật Trình</h3>
+  <div class="note">Chỉ bạn thấy form này — chọn các trường rồi bấm "Gửi báo cáo".</div>
+
+  <table>
+    <tr><th>Ngày</th><th>Biển số</th><th>Vật tư</th><th>Nơi lấy</th><th>Nơi đổ</th><th>Số chuyến</th></tr>
+    <tr>
+      <td id="td-date"></td>
+      <td><select id="plate"></select></td>
+      <td><select id="material"></select></td>
+      <td><select id="from"></select></td>
+      <td><select id="to"></select></td>
+      <td><input id="trips" type="number" min="0" placeholder="vd: 3"></td>
+    </tr>
+  </table>
+
+  <button id="sendBtn">📝 Gửi báo cáo</button>
+  <div id="msg" class="warn" style="display:none"></div>
+
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script>
+    const tg = window.Telegram.WebApp || {};
+    try{ if(tg.expand) tg.expand(); }catch(e){}
+
+    // parse query params (bot sẽ gắn chat_id & thread_id khi tạo nút)
+    const params = new URLSearchParams(location.search);
+    const chat_id = params.get('chat_id') || '';
+    const thread_id = params.get('thread_id') || '';
+
+    // set today's date
+    (function setDate(){
+      const d = new Date();
+      const dd = String(d.getDate()).padStart(2,'0');
+      const mm = String(d.getMonth()+1).padStart(2,'0');
+      const yyyy = d.getFullYear();
+      document.getElementById('td-date').innerText = `${dd}/${mm}/${yyyy}`;
+    })();
+
+    function fill(id, arr){
+      const sel = document.getElementById(id);
+      sel.innerHTML = '';
+      arr.forEach(v=>{
+        const opt = document.createElement('option');
+        opt.value = v;
+        opt.text = v;
+        sel.appendChild(opt);
+      });
+    }
+
+    function showMsg(t){
+      const el = document.getElementById('msg');
+      el.style.display = 'block';
+      el.innerText = t;
+    }
+
+    // Robust load config.json (no-store to reflect edits quickly)
+    fetch('config.json', { cache: 'no-store' })
+      .then(r => {
+        if(!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      })
+      .then(cfg => {
+        const plates = Array.isArray(cfg.plates) ? cfg.plates : (Array.isArray(cfg.plate) ? cfg.plate : []);
+        const materials = Array.isArray(cfg.materials) ? cfg.materials : (Array.isArray(cfg.material) ? cfg.material : []);
+        const froms = Array.isArray(cfg.from) ? cfg.from : (Array.isArray(cfg.sources) ? cfg.sources : []);
+        const tos = Array.isArray(cfg.to) ? cfg.to : (Array.isArray(cfg.destinations) ? cfg.destinations : []);
+        const norm = arr => (arr||[]).map(x=>(''+x).trim()).filter(x=>x);
+        fill('plate', norm(plates));
+        fill('material', norm(materials));
+        fill('from', norm(froms));
+        fill('to', norm(tos));
+      })
+      .catch(err => {
+        console.error('Load config.json failed:', err);
+        // fallback minimal values
+        fill('plate', ['29K-03813']);
+        fill('material', ['Bùn']);
+        fill('from', ['Tứ Hiệp']);
+        fill('to', ['Xâm Động']);
+        showMsg('Không tải được config.json — kiểm tra bạn đã commit file và site đã deploy.');
+      });
+
+    // Send payload to bot when user clicks submit
+    document.getElementById('sendBtn').addEventListener('click', function(){
+      const plate = document.getElementById('plate').value || '';
+      const material = document.getElementById('material').value || '';
+      const from = document.getElementById('from').value || '';
+      const to = document.getElementById('to').value || '';
+      const trips = document.getElementById('trips').value || '';
+
+      if(!plate || !material || !from || !to || trips === ''){
+        showMsg('Vui lòng điền đầy đủ các trường (biển, vật tư, nơi, số chuyến).');
+        return;
+      }
+
+      const payload = {
+        type: 'nhattrinh',
+        chat_id: chat_id,         // may be empty; bot will fallback
+        thread_id: thread_id || null,
+        date: document.getElementById('td-date').innerText,
+        plate, material, from, to, trips,
+        ts: new Date().toISOString()
+      };
+
+      try {
+        if(tg.sendData) {
+          tg.sendData(JSON.stringify(payload));   // send to bot
+          if(tg.close) tg.close();
+          // UX: show quick message
+          alert('Đã gửi báo cáo. Cảm ơn bạn!');
+        } else {
+          // fallback: open link to send? but most modern Telegram support WebApp
+          alert('Không thể gửi dữ liệu — Telegram client không hỗ trợ WebApp sendData.');
+        }
+      } catch(e){
+        console.error('sendData error', e);
+        showMsg('Lỗi gửi, thử lại.');
+      }
+    });
+  </script>
+</body>
+</html>
